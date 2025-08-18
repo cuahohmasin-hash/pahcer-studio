@@ -60,7 +60,8 @@ function setupExecutionService(): void {
 
 function setupAnalysisService(): void {
   // AnalysisServiceを初期化
-  analysisService = new AnalysisService();
+  const container = DIContainer.getInstance();
+  analysisService = new AnalysisService(container.getConfigService());
 }
 
 ipcMain.handle('execution:start', async (event, request: TestExecutionRequest) => {
