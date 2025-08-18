@@ -124,9 +124,9 @@ export class MockFileSystemService implements IFileSystemService {
   async mkdir(dirPath: string, options?: { recursive?: boolean }): Promise<void> {
     if (options?.recursive) {
       // 再帰的にディレクトリを作成
-      const parts = dirPath.split(path.sep).filter(part => part !== '');
+      const parts = dirPath.split(path.sep).filter((part) => part !== '');
       let currentPath = dirPath.startsWith('/') ? '/' : '';
-      
+
       for (const part of parts) {
         currentPath = currentPath === '/' ? `/${part}` : path.join(currentPath, part);
         if (!this.files.has(currentPath)) {

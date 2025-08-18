@@ -36,13 +36,9 @@ function createWindow(): void {
 }
 
 function setupExecutionService(): void {
-  // DIContainerから依存関係を取得
+  // DIContainerからExecutionServiceを取得
   const container = DIContainer.getInstance();
-  const executionRepository = container.getExecutionRepository();
-  const processManager = container.getProcessManager();
-
-  // ExecutionServiceを依存性注入で構築
-  executionService = new ExecutionService(executionRepository, processManager);
+  executionService = container.getExecutionService();
 
   // ExecutionServiceのイベントをレンダラープロセスに転送
   executionService.on('execution:status', (data) => {

@@ -25,11 +25,14 @@ export class ExecutionService extends EventEmitter {
   constructor(
     private readonly executionRepository: IExecutionRepository,
     private readonly processManager: ProcessManager,
+    configService: ConfigService,
+    scoreAnalysisService: ScoreAnalysisService,
+    fileHistoryService: FileHistoryService,
   ) {
     super();
-    this.configService = new ConfigService();
-    this.scoreAnalysisService = new ScoreAnalysisService();
-    this.fileHistoryService = new FileHistoryService();
+    this.configService = configService;
+    this.scoreAnalysisService = scoreAnalysisService;
+    this.fileHistoryService = fileHistoryService;
   }
 
   /**

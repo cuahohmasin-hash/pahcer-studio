@@ -9,6 +9,7 @@ import {
 import { ConfigService } from '../services/ConfigService';
 import { FileHistoryService } from '../services/FileHistoryService';
 import { ScoreAnalysisService } from '../services/ScoreAnalysisService';
+import { ExecutionService } from '../services/ExecutionService';
 
 /**
  * 依存性注入コンテナ
@@ -53,6 +54,16 @@ export class DIContainer {
     // ExecutionRepositoryの設定
     const executionRepository = new ExecutionRepository(scoreAnalysisService, fileSystemService);
     this.dependencies.set('IExecutionRepository', executionRepository);
+
+    // ExecutionServiceの設定
+    const executionService = new ExecutionService(
+      executionRepository,
+      processManager,
+      configService,
+      scoreAnalysisService,
+      fileHistoryService,
+    );
+    this.dependencies.set('ExecutionService', executionService);
   }
 
   public get<T>(key: string): T {
@@ -90,6 +101,10 @@ export class DIContainer {
 
   public getProcessManager(): ProcessManager {
     return this.get<ProcessManager>('ProcessManager');
+  }
+
+  public getExecutionService(): ExecutionService {
+    return this.get<ExecutionService>('ExecutionService');
   }
 
   // テスト用のモック注入
@@ -132,6 +147,16 @@ export class DIContainer {
       mockFileSystemService,
     );
     container.dependencies.set('IExecutionRepository', executionRepository);
+
+    // ExecutionServiceの設定（テスト用）
+    const executionService = new ExecutionService(
+      executionRepository,
+      processManager,
+      configService,
+      scoreAnalysisService,
+      fileHistoryService,
+    );
+    container.dependencies.set('ExecutionService', executionService);
 
     return container;
   }
