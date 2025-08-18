@@ -1,6 +1,6 @@
-import * as fs from 'fs/promises';
 import * as path from 'path';
 import { parse, stringify } from 'smol-toml';
+import { IFileSystemService } from './filesystem';
 
 export interface PahcerConfig {
   general?: {
@@ -19,6 +19,9 @@ export interface PahcerConfig {
     compile_steps?: string[];
     test_steps?: string[];
   };
+  'pahcer-studio'?: Array<{
+    save_path_list?: string[];
+  }>;
 }
 
 /**
@@ -30,9 +33,10 @@ export class ConfigService {
   private readonly backupPath: string;
   private readonly bestScoresPath: string;
 
-  constructor() {
-    // pacher_electron/がプロジェクトルートの1階層下にある前提
-    const projectRoot = path.resolve(process.cwd(), '..');
+  constructor(
+    private fileSystem: IFileSystemService,
+    projectRoot: string = path.resolve(process.cwd(), '..'),
+  ) {
     this.configPath = path.join(projectRoot, 'pahcer_config.toml');
     this.backupPath = path.join(projectRoot, 'pahcer_config.toml.bak');
     this.bestScoresPath = path.join(projectRoot, 'pahcer', 'best_scores.json');
@@ -43,7 +47,7 @@ export class ConfigService {
    */
   async getConfig(): Promise<PahcerConfig> {
     try {
-      const content = await fs.readFile(this.configPath, 'utf-8');
+      const content = await this.fileSystem.readFile(this.configPath, 'utf-8');
       return parse(content) as PahcerConfig;
     } catch (error) {
       console.error(`Error loading config: ${error}`);
@@ -64,7 +68,7 @@ export class ConfigService {
 
       // smol-tomlのstringifyを使用してTOML文字列を生成
       const tomlContent = stringify(updatedConfig);
-      await fs.writeFile(this.configPath, tomlContent, 'utf-8');
+      await this.fileSystem.writeFile(this.configPath, tomlContent, 'utf-8');
 
       return await this.getConfig();
     } catch (error) {
@@ -78,7 +82,7 @@ export class ConfigService {
    */
   async backupConfig(): Promise<boolean> {
     try {
-      await fs.copyFile(this.configPath, this.backupPath);
+      await this.fileSystem.copyFile(this.configPath, this.backupPath);
       return true;
     } catch (error) {
       console.error(`Error backing up config: ${error}`);
@@ -91,8 +95,8 @@ export class ConfigService {
    */
   async restoreConfig(): Promise<boolean> {
     try {
-      await fs.access(this.backupPath);
-      await fs.copyFile(this.backupPath, this.configPath);
+      await this.fileSystem.access(this.backupPath);
+      await this.fileSystem.copyFile(this.backupPath, this.configPath);
       return true;
     } catch (error) {
       console.error(`Error restoring config: ${error}`);
@@ -124,7 +128,7 @@ export class ConfigService {
 
       // smol-tomlのstringifyを使用してTOML文字列を生成
       const tomlContent = stringify(updatedConfig);
-      await fs.writeFile(this.configPath, tomlContent, 'utf-8');
+      await this.fileSystem.writeFile(this.configPath, tomlContent, 'utf-8');
 
       return true;
     } catch (error) {
@@ -162,7 +166,7 @@ export class ConfigService {
    */
   async getBestScores(): Promise<Record<number, number>> {
     try {
-      const content = await fs.readFile(this.bestScoresPath, 'utf-8');
+      const content = await this.fileSystem.readFile(this.bestScoresPath, 'utf-8');
       const bestScores = JSON.parse(content);
 
       // JSONのキーは文字列なので、数値に変換
@@ -202,6 +206,40 @@ export class ConfigService {
     } else {
       // Maxの場合: 自分のスコア / ベストスコア
       return score / bestScore;
+    }
+  }
+
+  /**
+   * pahcer-studioセクションからsave_path_listを取得
+   * @returns { paths: string[], isConfigured: boolean } パス一覧と設定されているかどうか
+   */
+  async getSavePathList(): Promise<{ paths: string[]; isConfigured: boolean }> {
+    try {
+      const config = await this.getConfig();
+      const pahcerStudioConfig = config['pahcer-studio'];
+
+      // pahcer-studioセクションが存在しない場合
+      if (!pahcerStudioConfig || pahcerStudioConfig.length === 0) {
+        return { paths: [], isConfigured: false };
+      }
+
+      const firstConfig = pahcerStudioConfig[0];
+
+      // save_path_listプロパティが存在しない場合
+      if (!('save_path_list' in firstConfig)) {
+        return { paths: [], isConfigured: false };
+      }
+
+      // save_path_listが存在するが空の場合
+      if (!firstConfig.save_path_list || firstConfig.save_path_list.length === 0) {
+        return { paths: [], isConfigured: true };
+      }
+
+      // 正常にパスが設定されている場合
+      return { paths: firstConfig.save_path_list, isConfigured: true };
+    } catch (error) {
+      console.error(`Error getting save path list: ${error}`);
+      return { paths: [], isConfigured: false };
     }
   }
 }
