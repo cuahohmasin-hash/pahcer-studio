@@ -32,11 +32,13 @@ export class ConfigService {
   private readonly configPath: string;
   private readonly backupPath: string;
   private readonly bestScoresPath: string;
+  private readonly projectRoot: string;
 
   constructor(
     private fileSystem: IFileSystemService,
     projectRoot: string = path.resolve(process.cwd(), '..'),
   ) {
+    this.projectRoot = projectRoot;
     this.configPath = path.join(projectRoot, 'pahcer_config.toml');
     this.backupPath = path.join(projectRoot, 'pahcer_config.toml.bak');
     this.bestScoresPath = path.join(projectRoot, 'pahcer', 'best_scores.json');
@@ -241,5 +243,118 @@ export class ConfigService {
       console.error(`Error getting save path list: ${error}`);
       return { paths: [], isConfigured: false };
     }
+  }
+
+  /**
+   * save_path_listから実際に存在するファイル一覧を取得
+   * @returns { files: Array<{path: string, isDirectory: boolean, size?: number}>, isConfigured: boolean, totalCount: number } 
+   */
+  async getActualFileList(): Promise<{
+    files: Array<{ path: string; isDirectory: boolean; size?: number }>;
+    isConfigured: boolean;
+    totalCount: number;
+  }> {
+    try {
+      const savePathResult = await this.getSavePathList();
+      
+      if (!savePathResult.isConfigured) {
+        return { files: [], isConfigured: false, totalCount: 0 };
+      }
+
+      if (savePathResult.paths.length === 0) {
+        return { files: [], isConfigured: true, totalCount: 0 };
+      }
+
+      const allFiles: Array<{ path: string; isDirectory: boolean; size?: number }> = [];
+
+      for (const targetPath of savePathResult.paths) {
+        try {
+          // パスを正規化（trailing slashを除去）
+          const normalizedPath = targetPath.replace(/\/+$/, '') || targetPath;
+
+          // プロジェクトルートからの絶対パスに変換
+          const fullPath = path.join(this.projectRoot, normalizedPath);
+
+          // ファイル/ディレクトリの存在確認
+          await this.fileSystem.access(fullPath);
+          const stats = await this.fileSystem.stat(fullPath);
+
+          if (stats.isDirectory()) {
+            // ディレクトリの場合は再帰的にファイルを収集
+            const dirFiles = await this.collectDirectoryFilesForDisplay(fullPath, normalizedPath);
+            allFiles.push(...dirFiles);
+          } else {
+            // ファイルの場合はそのまま追加
+            allFiles.push({
+              path: normalizedPath,
+              isDirectory: false,
+              size: stats.size,
+            });
+          }
+        } catch (error) {
+          // ファイル/ディレクトリが存在しない場合はスキップ
+          console.warn(`File or directory not found: ${targetPath}`);
+        }
+      }
+
+      // パスでソート
+      allFiles.sort((a, b) => a.path.localeCompare(b.path));
+
+      return {
+        files: allFiles,
+        isConfigured: true,
+        totalCount: allFiles.length,
+      };
+    } catch (error) {
+      console.error(`Error getting actual file list: ${error}`);
+      return { files: [], isConfigured: false, totalCount: 0 };
+    }
+  }
+
+  /**
+   * 表示用にディレクトリ内のファイルを再帰的に収集
+   */
+  private async collectDirectoryFilesForDisplay(
+    fullDirPath: string,
+    relativeDirPath: string,
+  ): Promise<Array<{ path: string; isDirectory: boolean; size?: number }>> {
+    const files: Array<{ path: string; isDirectory: boolean; size?: number }> = [];
+
+    try {
+      const entries = await this.fileSystem.readdir(fullDirPath);
+
+      for (const entry of entries) {
+        const fullPath = path.join(fullDirPath, entry.name);
+        const relativePath = path.join(relativeDirPath, entry.name);
+
+        try {
+          if (entry.isDirectory()) {
+            // ディレクトリエントリを追加
+            files.push({
+              path: relativePath + '/',
+              isDirectory: true,
+            });
+            // 再帰的にサブディレクトリを探索
+            const subFiles = await this.collectDirectoryFilesForDisplay(fullPath, relativePath);
+            files.push(...subFiles);
+          } else {
+            // ファイルエントリを追加
+            const stats = await this.fileSystem.stat(fullPath);
+            files.push({
+              path: relativePath,
+              isDirectory: false,
+              size: stats.size,
+            });
+          }
+        } catch (error) {
+          // 個別のファイル/ディレクトリでエラーが発生してもスキップして続行
+          console.warn(`Error processing ${relativePath}:`, error);
+        }
+      }
+    } catch (error) {
+      console.warn(`Error reading directory ${relativeDirPath}:`, error);
+    }
+
+    return files;
   }
 }
