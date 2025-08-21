@@ -34,7 +34,7 @@ const ConfigHelp: React.FC = () => {
         <div>]</div>
       </Box>
 
-      <Typography variant="subtitle2" sx={{ mb: 0.5, fontWeight: 'medium', color: '#2e7d32' }}>
+      <Typography variant="subtitle2" sx={{ mb: 0.5, fontWeight: 'medium', color: '#ed6c02' }}>
         📁 コピー先
       </Typography>
       <Typography variant="body2" sx={{ mb: 1.5, fontSize: '0.85rem' }}>
