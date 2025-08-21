@@ -18,14 +18,12 @@ import {
   ListItemText,
   Chip,
   Container,
-  Tooltip,
 } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import PendingIcon from '@mui/icons-material/Pending';
 import StopIcon from '@mui/icons-material/Stop';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import type { TestExecution, TestExecutionRequest, LogMessage } from '../../../schemas/execution';
 import CopyTargetDisplay from './CopyTargetDisplay';
 import ConfigHelp from './ConfigHelp';
@@ -49,12 +47,6 @@ const TestExecutionForm: React.FC = () => {
   const logsEndRef = useRef<HTMLDivElement>(null);
   const currentExecutionRef = useRef<TestExecution | null>(null);
 
-  // コピー対象ファイル/フォルダの状態
-  const [actualFiles, setActualFiles] = useState<Array<{ path: string; isDirectory: boolean; size?: number }>>([]);
-  const [isConfigured, setIsConfigured] = useState(false);
-  const [totalFileCount, setTotalFileCount] = useState(0);
-  const [loadingSavePaths, setLoadingSavePaths] = useState(true);
-
   // currentExecutionが変更されたときにrefも更新
   useEffect(() => {
     currentExecutionRef.current = currentExecution;
@@ -66,27 +58,6 @@ const TestExecutionForm: React.FC = () => {
       logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [executionLogs]);
-
-  // 実際のファイル一覧を取得
-  useEffect(() => {
-    const loadActualFileList = async () => {
-      try {
-        const result = await window.electronAPI.config.getActualFileList();
-        setActualFiles(result.files);
-        setIsConfigured(result.isConfigured);
-        setTotalFileCount(result.totalCount);
-      } catch (error) {
-        console.error('Failed to load actual file list:', error);
-        setActualFiles([]);
-        setIsConfigured(false);
-        setTotalFileCount(0);
-      } finally {
-        setLoadingSavePaths(false);
-      }
-    };
-
-    loadActualFileList();
-  }, []);
 
   useEffect(() => {
     const handleLog = (data: {
@@ -253,7 +224,9 @@ const TestExecutionForm: React.FC = () => {
     <Container maxWidth="md" sx={{ py: 1, height: '100%', overflow: 'auto' }}>
       <Paper elevation={2} sx={{ borderRadius: 2, overflow: 'hidden', mb: 1 }}>
         <Box sx={{ bgcolor: 'primary.main', color: 'white', py: 1.5, px: 2.5 }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>AtCoder Pahcer テスト実行</Typography>
+          <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+            AtCoder Pahcer テスト実行
+          </Typography>
         </Box>
         <CardContent sx={{ p: 2 }}>
           {!currentExecution ||
@@ -279,7 +252,11 @@ const TestExecutionForm: React.FC = () => {
               <Box sx={{ display: 'flex', gap: 3, mb: 2 }}>
                 {/* 左側：テスト設定 */}
                 <Box sx={{ flex: 1 }}>
-                  <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'medium', mb: 1.5 }}>
+                  <Typography
+                    variant="subtitle2"
+                    gutterBottom
+                    sx={{ fontWeight: 'medium', mb: 1.5 }}
+                  >
                     テスト設定
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 2, mb: 1.5 }}>
@@ -308,7 +285,11 @@ const TestExecutionForm: React.FC = () => {
 
                 {/* 右側：オプション設定 */}
                 <Box sx={{ flex: 1 }}>
-                  <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'medium', mb: 1.5 }}>
+                  <Typography
+                    variant="subtitle2"
+                    gutterBottom
+                    sx={{ fontWeight: 'medium', mb: 1.5 }}
+                  >
                     オプション設定
                   </Typography>
                   <FormGroup>
@@ -349,12 +330,7 @@ const TestExecutionForm: React.FC = () => {
                 <ConfigHelp />
               </Box>
 
-              <CopyTargetDisplay
-                files={actualFiles}
-                isConfigured={isConfigured}
-                loading={loadingSavePaths}
-                totalCount={totalFileCount}
-              />
+              <CopyTargetDisplay />
 
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1.5 }}>
                 <Button

@@ -11,7 +11,7 @@ const ConfigHelp: React.FC = () => {
       <Typography variant="body2" sx={{ mb: 1.5 }}>
         実行時にファイルやフォルダをバックアップするには、プロジェクトルートのpahcer_config.tomlに以下を追加してください：
       </Typography>
-      
+
       <Box
         sx={{
           backgroundColor: '#2d2d2d',
@@ -25,17 +25,19 @@ const ConfigHelp: React.FC = () => {
       >
         <div>[[pahcer-studio]]</div>
         <div>save_path_list = [</div>
-        <div>&nbsp;&nbsp;"src/main.cpp",</div>
-        <div>&nbsp;&nbsp;"src/",</div>
-        <div>&nbsp;&nbsp;"Makefile"</div>
+        <div>&nbsp;&nbsp;&quot;src/main.cpp&quot;,</div>
+        <div>&nbsp;&nbsp;&quot;src/&quot;,</div>
+        <div>&nbsp;&nbsp;&quot;Makefile&quot;</div>
         <div>]</div>
       </Box>
 
       <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
-        • 相対パスで指定（絶対パスは使用不可）<br />
-        • ファイルとフォルダの両方を指定可能<br />
-        • フォルダを指定すると中身も再帰的にコピー<br />
-        • 合計5MB、100ファイルまでの制限あり
+        • 相対パスで指定（絶対パスは使用不可）
+        <br />
+        • ファイルとフォルダの両方を指定可能
+        <br />
+        • フォルダを指定すると中身も再帰的にコピー
+        <br />• 合計5MB、100ファイルまでの制限あり
       </Typography>
     </Box>
   );

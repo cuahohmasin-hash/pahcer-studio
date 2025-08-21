@@ -247,7 +247,7 @@ export class ConfigService {
 
   /**
    * save_path_listから実際に存在するファイル一覧を取得
-   * @returns { files: Array<{path: string, isDirectory: boolean, size?: number}>, isConfigured: boolean, totalCount: number } 
+   * @returns { files: Array<{path: string, isDirectory: boolean, size?: number}>, isConfigured: boolean, totalCount: number }
    */
   async getActualFileList(): Promise<{
     files: Array<{ path: string; isDirectory: boolean; size?: number }>;
@@ -256,7 +256,7 @@ export class ConfigService {
   }> {
     try {
       const savePathResult = await this.getSavePathList();
-      
+
       if (!savePathResult.isConfigured) {
         return { files: [], isConfigured: false, totalCount: 0 };
       }

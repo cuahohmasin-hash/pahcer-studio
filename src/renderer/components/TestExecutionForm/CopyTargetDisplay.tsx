@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -9,9 +9,11 @@ import {
   CircularProgress,
   Alert,
   Paper,
+  IconButton,
 } from '@mui/material';
 import FolderIcon from '@mui/icons-material/Folder';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
+import RefreshIcon from '@mui/icons-material/Refresh';
 
 interface FileInfo {
   path: string;
@@ -19,19 +21,34 @@ interface FileInfo {
   size?: number;
 }
 
-interface CopyTargetDisplayProps {
-  files: FileInfo[];
-  isConfigured: boolean;
-  loading: boolean;
-  totalCount: number;
-}
+const CopyTargetDisplay: React.FC = () => {
+  const [files, setFiles] = useState<FileInfo[]>([]);
+  const [isConfigured, setIsConfigured] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
+  const [loading, setLoading] = useState(true);
 
-const CopyTargetDisplay: React.FC<CopyTargetDisplayProps> = ({
-  files,
-  isConfigured,
-  loading,
-  totalCount,
-}) => {
+  // ファイル一覧を取得する関数
+  const loadActualFileList = async () => {
+    setLoading(true);
+    try {
+      const result = await window.electronAPI.config.getActualFileList();
+      setFiles(result.files);
+      setIsConfigured(result.isConfigured);
+      setTotalCount(result.totalCount);
+    } catch (error) {
+      console.error('Failed to load actual file list:', error);
+      setFiles([]);
+      setIsConfigured(false);
+      setTotalCount(0);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 初期読み込み
+  useEffect(() => {
+    loadActualFileList();
+  }, []);
   if (loading) {
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -92,6 +109,18 @@ const CopyTargetDisplay: React.FC<CopyTargetDisplayProps> = ({
           color="primary"
           sx={{ height: '18px', fontSize: '0.7rem' }}
         />
+        <IconButton
+          onClick={loadActualFileList}
+          size="small"
+          sx={{
+            p: 0.5,
+            color: 'primary.main',
+            '&:hover': { backgroundColor: 'primary.main', color: 'white' },
+          }}
+          title="ファイル一覧を更新"
+        >
+          <RefreshIcon sx={{ fontSize: '14px' }} />
+        </IconButton>
       </Box>
 
       <Paper
@@ -109,7 +138,13 @@ const CopyTargetDisplay: React.FC<CopyTargetDisplayProps> = ({
                 {getFileIcon(file)}
                 <ListItemText
                   primary={
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
                       <Typography
                         variant="caption"
                         sx={{
