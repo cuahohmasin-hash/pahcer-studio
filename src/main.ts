@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain } from 'electron';
 import * as path from 'path';
 import { ExecutionService } from './services/ExecutionService';
 import { AnalysisService } from './services/AnalysisService';
+import { ConfigService } from './services/ConfigService';
 import { DIContainer } from './infrastructure/DIContainer';
 import type { TestExecutionRequest } from './schemas/execution';
 import type { AnalysisRequest, UpdateAnalysisRequest } from './schemas/analysis';
@@ -11,6 +12,7 @@ import { AssetDownloadService } from './services/AssetDownloadService';
 let mainWindow: BrowserWindow;
 let executionService: ExecutionService;
 let analysisService: AnalysisService;
+let configService: ConfigService;
 
 function createWindow(): void {
   // メインウィンドウを作成
@@ -62,6 +64,12 @@ function setupAnalysisService(): void {
   // AnalysisServiceを初期化
   const container = DIContainer.getInstance();
   analysisService = new AnalysisService(container.getConfigService());
+}
+
+function setupConfigService(): void {
+  // ConfigServiceを初期化
+  const container = DIContainer.getInstance();
+  configService = container.getConfigService();
 }
 
 ipcMain.handle('execution:start', async (event, request: TestExecutionRequest) => {
@@ -117,6 +125,15 @@ ipcMain.handle(
   },
 );
 
+// Config関連のIPCハンドラー
+ipcMain.handle('config:getSavePathList', async () => {
+  return await configService.getSavePathList();
+});
+
+ipcMain.handle('config:getActualFileList', async () => {
+  return await configService.getActualFileList();
+});
+
 ipcMain.handle('asset:deleteVisualizer', async () => {
   const dir = path.join(__dirname, '../public/visualizer');
   try {
@@ -159,6 +176,7 @@ ipcMain.handle('asset:downloadVisualizer', async (event, { url }: { url: string 
 app.whenReady().then(() => {
   setupExecutionService();
   setupAnalysisService();
+  setupConfigService();
   createWindow();
 });
 
