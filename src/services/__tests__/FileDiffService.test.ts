@@ -24,17 +24,17 @@ describe('FileDiffService', () => {
       const executionId2 = 'exec-2024-01-02-123456';
 
       // 実行1のデータ（古い方）
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/exec-2024-01-01-123456');
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/exec-2024-01-01-123456');
       mockFileSystem.addFile(
-        '/mock/pahcer-studio/data/exec-2024-01-01-123456/main.cpp',
+        '/mock/pahcer-studio/data/file_history/exec-2024-01-01-123456/main.cpp',
         '#include <iostream>\nint main() {\n  std::cout << "Hello" << std::endl;\n  return 0;\n}',
         { size: 100 },
       );
 
       // 実行2のデータ（新しい方）
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/exec-2024-01-02-123456');
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/exec-2024-01-02-123456');
       mockFileSystem.addFile(
-        '/mock/pahcer-studio/data/exec-2024-01-02-123456/main.cpp',
+        '/mock/pahcer-studio/data/file_history/exec-2024-01-02-123456/main.cpp',
         '#include <iostream>\nint main() {\n  std::cout << "Hello World" << std::endl;\n  return 0;\n}',
         { size: 120 },
       );
@@ -60,10 +60,10 @@ describe('FileDiffService', () => {
       const executionId2 = 'exec-older';
 
       // 実行1のディレクトリ（ファイルが存在しない場合でも空のディレクトリ）
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/exec-newer');
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/exec-newer');
 
       // 実行2のディレクトリ（同じく空）
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/exec-older');
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/exec-older');
 
       const result = await fileDiffService.getDiff(executionId1, executionId2);
 
@@ -85,10 +85,14 @@ describe('FileDiffService', () => {
       const executionId2 = 'missing-folder-exec';
 
       // 実行1は存在
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/existing-exec');
-      mockFileSystem.addFile('/mock/pahcer-studio/data/existing-exec/file1.txt', 'content1', {
-        size: 8,
-      });
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/existing-exec');
+      mockFileSystem.addFile(
+        '/mock/pahcer-studio/data/file_history/existing-exec/file1.txt',
+        'content1',
+        {
+          size: 8,
+        },
+      );
 
       // 実行2のフォルダは作成しない（存在しない状態）
 
@@ -100,18 +104,26 @@ describe('FileDiffService', () => {
       const executionId2 = 'exec-new';
 
       // 実行1: main.cppのみ
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/exec-old');
-      mockFileSystem.addFile('/mock/pahcer-studio/data/exec-old/main.cpp', '#include <iostream>', {
-        size: 50,
-      });
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/exec-old');
+      mockFileSystem.addFile(
+        '/mock/pahcer-studio/data/file_history/exec-old/main.cpp',
+        '#include <iostream>',
+        {
+          size: 50,
+        },
+      );
 
       // 実行2: main.cpp + new-file.h
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/exec-new');
-      mockFileSystem.addFile('/mock/pahcer-studio/data/exec-new/main.cpp', '#include <iostream>', {
-        size: 50,
-      });
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/exec-new');
       mockFileSystem.addFile(
-        '/mock/pahcer-studio/data/exec-new/new-file.h',
+        '/mock/pahcer-studio/data/file_history/exec-new/main.cpp',
+        '#include <iostream>',
+        {
+          size: 50,
+        },
+      );
+      mockFileSystem.addFile(
+        '/mock/pahcer-studio/data/file_history/exec-new/new-file.h',
         '#ifndef NEW_FILE_H\n#define NEW_FILE_H\n#endif',
         { size: 40 },
       );
@@ -140,22 +152,22 @@ describe('FileDiffService', () => {
       const executionId2 = 'exec-fewer-files';
 
       // 実行1: 複数ファイル
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/exec-with-files');
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/exec-with-files');
       mockFileSystem.addFile(
-        '/mock/pahcer-studio/data/exec-with-files/main.cpp',
+        '/mock/pahcer-studio/data/file_history/exec-with-files/main.cpp',
         '#include <iostream>',
         { size: 50 },
       );
       mockFileSystem.addFile(
-        '/mock/pahcer-studio/data/exec-with-files/deprecated.h',
+        '/mock/pahcer-studio/data/file_history/exec-with-files/deprecated.h',
         '// This file is deprecated',
         { size: 30 },
       );
 
       // 実行2: main.cppのみ
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/exec-fewer-files');
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/exec-fewer-files');
       mockFileSystem.addFile(
-        '/mock/pahcer-studio/data/exec-fewer-files/main.cpp',
+        '/mock/pahcer-studio/data/file_history/exec-fewer-files/main.cpp',
         '#include <iostream>',
         { size: 50 },
       );
@@ -180,8 +192,8 @@ describe('FileDiffService', () => {
       const executionId2 = 'empty-exec-2';
 
       // 両方とも空のディレクトリ
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/empty-exec-1');
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/empty-exec-2');
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/empty-exec-1');
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/empty-exec-2');
 
       const result = await fileDiffService.getDiff(executionId1, executionId2);
 
@@ -198,39 +210,55 @@ describe('FileDiffService', () => {
       const executionId2 = 'complex-new';
 
       // 実行1: 4つのファイル
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/complex-old');
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/complex-old');
       mockFileSystem.addFile(
-        '/mock/pahcer-studio/data/complex-old/unchanged.cpp',
+        '/mock/pahcer-studio/data/file_history/complex-old/unchanged.cpp',
         'unchanged content',
         { size: 20 },
       );
-      mockFileSystem.addFile('/mock/pahcer-studio/data/complex-old/modified.cpp', 'old content', {
-        size: 15,
-      });
-      mockFileSystem.addFile('/mock/pahcer-studio/data/complex-old/deleted.h', 'to be deleted', {
-        size: 18,
-      });
       mockFileSystem.addFile(
-        '/mock/pahcer-studio/data/complex-old/renamed-old.txt',
+        '/mock/pahcer-studio/data/file_history/complex-old/modified.cpp',
+        'old content',
+        {
+          size: 15,
+        },
+      );
+      mockFileSystem.addFile(
+        '/mock/pahcer-studio/data/file_history/complex-old/deleted.h',
+        'to be deleted',
+        {
+          size: 18,
+        },
+      );
+      mockFileSystem.addFile(
+        '/mock/pahcer-studio/data/file_history/complex-old/renamed-old.txt',
         'renamed content',
         { size: 20 },
       );
 
       // 実行2: 4つのファイル（1つ削除、1つ変更、1つ追加、1つリネーム風）
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/complex-new');
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/complex-new');
       mockFileSystem.addFile(
-        '/mock/pahcer-studio/data/complex-new/unchanged.cpp',
+        '/mock/pahcer-studio/data/file_history/complex-new/unchanged.cpp',
         'unchanged content',
         { size: 20 },
       );
-      mockFileSystem.addFile('/mock/pahcer-studio/data/complex-new/modified.cpp', 'new content', {
-        size: 15,
-      });
-      mockFileSystem.addFile('/mock/pahcer-studio/data/complex-new/added.py', 'print("hello")', {
-        size: 18,
-      });
       mockFileSystem.addFile(
-        '/mock/pahcer-studio/data/complex-new/renamed-new.txt',
+        '/mock/pahcer-studio/data/file_history/complex-new/modified.cpp',
+        'new content',
+        {
+          size: 15,
+        },
+      );
+      mockFileSystem.addFile(
+        '/mock/pahcer-studio/data/file_history/complex-new/added.py',
+        'print("hello")',
+        {
+          size: 18,
+        },
+      );
+      mockFileSystem.addFile(
+        '/mock/pahcer-studio/data/file_history/complex-new/renamed-new.txt',
         'renamed content',
         { size: 20 },
       );
@@ -274,9 +302,9 @@ save_path_list = ["main.cpp"]
       });
 
       // 実行データ（保存された古いファイル）
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/exec-test');
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/exec-test');
       mockFileSystem.addFile(
-        '/mock/pahcer-studio/data/exec-test/main.cpp',
+        '/mock/pahcer-studio/data/file_history/exec-test/main.cpp',
         '#include <iostream>\nint main() {\n  std::cout << "Old version" << std::endl;\n  return 0;\n}',
         { size: 100 },
       );
@@ -304,9 +332,9 @@ save_path_list = ["main.cpp"]
       const executionId = 'exec-with-files';
 
       // 実行データにはファイルが存在
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/exec-with-files');
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/exec-with-files');
       mockFileSystem.addFile(
-        '/mock/pahcer-studio/data/exec-with-files/saved-file.cpp',
+        '/mock/pahcer-studio/data/file_history/exec-with-files/saved-file.cpp',
         '#include <iostream>',
         { size: 50 },
       );
@@ -336,7 +364,7 @@ save_path_list = ["current-file.js"]
       });
 
       // 実行データは空
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/empty-exec');
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/empty-exec');
 
       // 現在のプロジェクトファイル
       mockFileSystem.addFile('/mock/current-file.js', 'console.log("current");', { size: 25 });
@@ -363,12 +391,16 @@ save_path_list = ["missing-file.cpp", "existing-file.cpp"]
       });
 
       // 実行データ
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/exec-test');
-      mockFileSystem.addFile('/mock/pahcer-studio/data/exec-test/missing-file.cpp', 'old content', {
-        size: 15,
-      });
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/exec-test');
       mockFileSystem.addFile(
-        '/mock/pahcer-studio/data/exec-test/existing-file.cpp',
+        '/mock/pahcer-studio/data/file_history/exec-test/missing-file.cpp',
+        'old content',
+        {
+          size: 15,
+        },
+      );
+      mockFileSystem.addFile(
+        '/mock/pahcer-studio/data/file_history/exec-test/existing-file.cpp',
         'old existing content',
         { size: 25 },
       );
@@ -407,13 +439,21 @@ save_path_list = ["data.bin", "text.txt"]
       });
 
       // 実行データ
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/binary-test');
-      mockFileSystem.addFile('/mock/pahcer-studio/data/binary-test/data.bin', 'old\0binary', {
-        size: 12,
-      });
-      mockFileSystem.addFile('/mock/pahcer-studio/data/binary-test/text.txt', 'old text', {
-        size: 10,
-      });
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/binary-test');
+      mockFileSystem.addFile(
+        '/mock/pahcer-studio/data/file_history/binary-test/data.bin',
+        'old\0binary',
+        {
+          size: 12,
+        },
+      );
+      mockFileSystem.addFile(
+        '/mock/pahcer-studio/data/file_history/binary-test/text.txt',
+        'old text',
+        {
+          size: 10,
+        },
+      );
 
       // 現在のファイル
       mockFileSystem.addFile('/mock/data.bin', 'new\0binary\0data', { size: 18 });
@@ -454,10 +494,14 @@ save_path_list = ["main.cpp"]
       const executionId2 = 'file-instead-of-dir-2';
 
       // ディレクトリではなくファイルとして作成
-      mockFileSystem.addFile('/mock/pahcer-studio/data/file-instead-of-dir-1', 'not a directory', {
-        size: 20,
-      });
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file-instead-of-dir-2');
+      mockFileSystem.addFile(
+        '/mock/pahcer-studio/data/file_history/file-instead-of-dir-1',
+        'not a directory',
+        {
+          size: 20,
+        },
+      );
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/file-instead-of-dir-2');
 
       await expect(fileDiffService.getDiff(executionId1, executionId2)).rejects.toThrow();
     });
@@ -468,11 +512,11 @@ save_path_list = ["main.cpp"]
 
       const longPath = 'very/long/nested/directory/structure/with/many/levels/deep/file.txt';
 
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/long-path-test-1');
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/long-path-test-1');
       // Create nested directories first
       const pathParts = longPath.split('/');
-      let currentPath1 = '/mock/pahcer-studio/data/long-path-test-1';
-      let currentPath2 = '/mock/pahcer-studio/data/long-path-test-2';
+      let currentPath1 = '/mock/pahcer-studio/data/file_history/long-path-test-1';
+      let currentPath2 = '/mock/pahcer-studio/data/file_history/long-path-test-2';
 
       for (let i = 0; i < pathParts.length - 1; i++) {
         currentPath1 += '/' + pathParts[i];
@@ -481,14 +525,22 @@ save_path_list = ["main.cpp"]
         mockFileSystem.addDirectory(currentPath2);
       }
 
-      mockFileSystem.addFile(`/mock/pahcer-studio/data/long-path-test-1/${longPath}`, 'content1', {
-        size: 10,
-      });
+      mockFileSystem.addFile(
+        `/mock/pahcer-studio/data/file_history/long-path-test-1/${longPath}`,
+        'content1',
+        {
+          size: 10,
+        },
+      );
 
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/long-path-test-2');
-      mockFileSystem.addFile(`/mock/pahcer-studio/data/long-path-test-2/${longPath}`, 'content2', {
-        size: 10,
-      });
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/long-path-test-2');
+      mockFileSystem.addFile(
+        `/mock/pahcer-studio/data/file_history/long-path-test-2/${longPath}`,
+        'content2',
+        {
+          size: 10,
+        },
+      );
 
       const result = await fileDiffService.getDiff(executionId1, executionId2);
 
@@ -509,17 +561,17 @@ save_path_list = ["main.cpp"]
         'file.with.many.dots.txt',
       ];
 
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/special-chars-1');
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/special-chars-2');
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/special-chars-1');
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/special-chars-2');
 
       specialFiles.forEach((fileName, index) => {
         mockFileSystem.addFile(
-          `/mock/pahcer-studio/data/special-chars-1/${fileName}`,
+          `/mock/pahcer-studio/data/file_history/special-chars-1/${fileName}`,
           `old content ${index}`,
           { size: 15 + index },
         );
         mockFileSystem.addFile(
-          `/mock/pahcer-studio/data/special-chars-2/${fileName}`,
+          `/mock/pahcer-studio/data/file_history/special-chars-2/${fileName}`,
           `new content ${index}`,
           { size: 15 + index },
         );
@@ -540,14 +592,14 @@ save_path_list = ["main.cpp"]
 
       const fileCount = 100;
 
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/many-files-1');
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/many-files-2');
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/many-files-1');
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/many-files-2');
 
       // 大量のファイルを作成
       for (let i = 0; i < fileCount; i++) {
         const fileName = `file-${i.toString().padStart(3, '0')}.txt`;
         mockFileSystem.addFile(
-          `/mock/pahcer-studio/data/many-files-1/${fileName}`,
+          `/mock/pahcer-studio/data/file_history/many-files-1/${fileName}`,
           `content ${i} old`,
           { size: 15 },
         );
@@ -555,7 +607,7 @@ save_path_list = ["main.cpp"]
         if (i % 3 === 0) {
           // 3つに1つは変更
           mockFileSystem.addFile(
-            `/mock/pahcer-studio/data/many-files-2/${fileName}`,
+            `/mock/pahcer-studio/data/file_history/many-files-2/${fileName}`,
             `content ${i} new`,
             { size: 15 },
           );
@@ -565,7 +617,7 @@ save_path_list = ["main.cpp"]
         } else {
           // 3つに1つは変更なし
           mockFileSystem.addFile(
-            `/mock/pahcer-studio/data/many-files-2/${fileName}`,
+            `/mock/pahcer-studio/data/file_history/many-files-2/${fileName}`,
             `content ${i} old`,
             { size: 15 },
           );
@@ -575,7 +627,7 @@ save_path_list = ["main.cpp"]
       // いくつか新しいファイルも追加
       for (let i = 0; i < 10; i++) {
         mockFileSystem.addFile(
-          `/mock/pahcer-studio/data/many-files-2/new-file-${i}.txt`,
+          `/mock/pahcer-studio/data/file_history/many-files-2/new-file-${i}.txt`,
           `new content ${i}`,
           { size: 18 },
         );
@@ -597,34 +649,54 @@ save_path_list = ["main.cpp"]
       const executionId1 = 'empty-content-1';
       const executionId2 = 'empty-content-2';
 
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/empty-content-1');
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/empty-content-2');
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/empty-content-1');
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/empty-content-2');
 
       // 空のファイル同士
-      mockFileSystem.addFile('/mock/pahcer-studio/data/empty-content-1/empty1.txt', '', {
-        size: 0,
-      });
-      mockFileSystem.addFile('/mock/pahcer-studio/data/empty-content-2/empty1.txt', '', {
-        size: 0,
-      });
+      mockFileSystem.addFile(
+        '/mock/pahcer-studio/data/file_history/empty-content-1/empty1.txt',
+        '',
+        {
+          size: 0,
+        },
+      );
+      mockFileSystem.addFile(
+        '/mock/pahcer-studio/data/file_history/empty-content-2/empty1.txt',
+        '',
+        {
+          size: 0,
+        },
+      );
 
       // 空 -> 内容あり
-      mockFileSystem.addFile('/mock/pahcer-studio/data/empty-content-1/empty2.txt', '', {
-        size: 0,
-      });
       mockFileSystem.addFile(
-        '/mock/pahcer-studio/data/empty-content-2/empty2.txt',
+        '/mock/pahcer-studio/data/file_history/empty-content-1/empty2.txt',
+        '',
+        {
+          size: 0,
+        },
+      );
+      mockFileSystem.addFile(
+        '/mock/pahcer-studio/data/file_history/empty-content-2/empty2.txt',
         'now has content',
         { size: 16 },
       );
 
       // 内容あり -> 空
-      mockFileSystem.addFile('/mock/pahcer-studio/data/empty-content-1/empty3.txt', 'had content', {
-        size: 12,
-      });
-      mockFileSystem.addFile('/mock/pahcer-studio/data/empty-content-2/empty3.txt', '', {
-        size: 0,
-      });
+      mockFileSystem.addFile(
+        '/mock/pahcer-studio/data/file_history/empty-content-1/empty3.txt',
+        'had content',
+        {
+          size: 12,
+        },
+      );
+      mockFileSystem.addFile(
+        '/mock/pahcer-studio/data/file_history/empty-content-2/empty3.txt',
+        '',
+        {
+          size: 0,
+        },
+      );
 
       const result = await fileDiffService.getDiff(executionId1, executionId2);
 
@@ -648,35 +720,47 @@ save_path_list = ["main.cpp"]
       const executionId1 = 'mixed-types-1';
       const executionId2 = 'mixed-types-2';
 
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/mixed-types-1');
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/mixed-types-2');
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/mixed-types-1');
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/mixed-types-2');
 
       // テキストファイル
-      mockFileSystem.addFile('/mock/pahcer-studio/data/mixed-types-1/readme.md', '# Old README', {
-        size: 12,
-      });
-      mockFileSystem.addFile('/mock/pahcer-studio/data/mixed-types-2/readme.md', '# New README', {
-        size: 12,
-      });
+      mockFileSystem.addFile(
+        '/mock/pahcer-studio/data/file_history/mixed-types-1/readme.md',
+        '# Old README',
+        {
+          size: 12,
+        },
+      );
+      mockFileSystem.addFile(
+        '/mock/pahcer-studio/data/file_history/mixed-types-2/readme.md',
+        '# New README',
+        {
+          size: 12,
+        },
+      );
 
       // バイナリファイル
       mockFileSystem.addFile(
-        '/mock/pahcer-studio/data/mixed-types-1/image.png',
+        '/mock/pahcer-studio/data/file_history/mixed-types-1/image.png',
         'PNG\0old\0binary',
         { size: 15 },
       );
       mockFileSystem.addFile(
-        '/mock/pahcer-studio/data/mixed-types-2/image.png',
+        '/mock/pahcer-studio/data/file_history/mixed-types-2/image.png',
         'PNG\0new\0binary',
         { size: 15 },
       );
 
       // テキスト -> バイナリ
-      mockFileSystem.addFile('/mock/pahcer-studio/data/mixed-types-1/convert.dat', 'plain text', {
-        size: 10,
-      });
       mockFileSystem.addFile(
-        '/mock/pahcer-studio/data/mixed-types-2/convert.dat',
+        '/mock/pahcer-studio/data/file_history/mixed-types-1/convert.dat',
+        'plain text',
+        {
+          size: 10,
+        },
+      );
+      mockFileSystem.addFile(
+        '/mock/pahcer-studio/data/file_history/mixed-types-2/convert.dat',
         'binary\0data\0now',
         { size: 15 },
       );
@@ -731,22 +815,30 @@ save_path_list = ["main.cpp"]
         },
       ];
 
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/cpp-project-old');
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/cpp-project-new');
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/cpp-project-old');
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/cpp-project-new');
 
       // Create nested directories for the project structure
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/cpp-project-old/src');
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/cpp-project-old/include');
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/cpp-project-new/src');
-      mockFileSystem.addDirectory('/mock/pahcer-studio/data/cpp-project-new/include');
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/cpp-project-old/src');
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/cpp-project-old/include');
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/cpp-project-new/src');
+      mockFileSystem.addDirectory('/mock/pahcer-studio/data/file_history/cpp-project-new/include');
 
       cppFiles.forEach(({ path, oldContent, newContent }) => {
-        mockFileSystem.addFile(`/mock/pahcer-studio/data/cpp-project-old/${path}`, oldContent, {
-          size: oldContent.length,
-        });
-        mockFileSystem.addFile(`/mock/pahcer-studio/data/cpp-project-new/${path}`, newContent, {
-          size: newContent.length,
-        });
+        mockFileSystem.addFile(
+          `/mock/pahcer-studio/data/file_history/cpp-project-old/${path}`,
+          oldContent,
+          {
+            size: oldContent.length,
+          },
+        );
+        mockFileSystem.addFile(
+          `/mock/pahcer-studio/data/file_history/cpp-project-new/${path}`,
+          newContent,
+          {
+            size: newContent.length,
+          },
+        );
       });
 
       const result = await fileDiffService.getDiff(executionId1, executionId2);
@@ -774,38 +866,38 @@ save_path_list = ["main.cpp"]
       const branchNew = 'feature-branch-new';
 
       // Gitブランチのような変更パターン
-      mockFileSystem.addDirectory(`/mock/pahcer-studio/data/${branchOld}`);
-      mockFileSystem.addDirectory(`/mock/pahcer-studio/data/${branchNew}`);
+      mockFileSystem.addDirectory(`/mock/pahcer-studio/data/file_history/${branchOld}`);
+      mockFileSystem.addDirectory(`/mock/pahcer-studio/data/file_history/${branchNew}`);
 
       // 既存ファイルの修正
       mockFileSystem.addFile(
-        `/mock/pahcer-studio/data/${branchOld}/existing.js`,
+        `/mock/pahcer-studio/data/file_history/${branchOld}/existing.js`,
         'function old() { return 42; }',
         { size: 30 },
       );
       mockFileSystem.addFile(
-        `/mock/pahcer-studio/data/${branchNew}/existing.js`,
+        `/mock/pahcer-studio/data/file_history/${branchNew}/existing.js`,
         'function improved() {\n  return 42 * 2;\n}',
         { size: 35 },
       );
 
       // 新機能の追加
       mockFileSystem.addFile(
-        `/mock/pahcer-studio/data/${branchNew}/feature.js`,
+        `/mock/pahcer-studio/data/file_history/${branchNew}/feature.js`,
         'export function newFeature() {\n  return "awesome";\n}',
         { size: 45 },
       );
 
       // 不要ファイルの削除
       mockFileSystem.addFile(
-        `/mock/pahcer-studio/data/${branchOld}/deprecated.js`,
+        `/mock/pahcer-studio/data/file_history/${branchOld}/deprecated.js`,
         'console.log("old code");',
         { size: 25 },
       );
 
       // テストファイルの追加
       mockFileSystem.addFile(
-        `/mock/pahcer-studio/data/${branchNew}/test.spec.js`,
+        `/mock/pahcer-studio/data/file_history/${branchNew}/test.spec.js`,
         'describe("tests", () => {\n  it("should work", () => {});\n});',
         { size: 55 },
       );

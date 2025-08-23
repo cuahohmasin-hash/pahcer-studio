@@ -77,7 +77,7 @@ export class FileDataService {
    * 保存ディレクトリ内のファイルを走査
    */
   async getExecutionFileData(executionId: string): Promise<VersionData> {
-    const dataPath = path.join(this.studioDataDir, executionId);
+    const dataPath = path.join(this.studioDataDir, 'file_history', executionId);
 
     try {
       await this.fileSystem.access(dataPath);
@@ -89,6 +89,9 @@ export class FileDataService {
     if (!stats.isDirectory()) {
       throw new Error(`Execution ${executionId} is not a directory`);
     }
+
+    // file_history_log.jsonから実行時刻を取得
+    const timestamp = await this.getExecutionTimestamp(dataPath);
 
     // ディレクトリ内のファイルを再帰的に収集（logファイルは除外）
     const fileList = await this.collectDirectoryFiles(dataPath, '');
@@ -116,7 +119,7 @@ export class FileDataService {
     return {
       execution: {
         id: executionId,
-        timestamp: new Date().toISOString(), // 現在時刻をデフォルトに
+        timestamp,
         dataPath,
       },
       files,
@@ -193,6 +196,28 @@ export class FileDataService {
     versionData2.files.forEach((_, path) => allPaths.add(path));
 
     return Array.from(allPaths).sort();
+  }
+
+  /**
+   * file_history_log.jsonから実行時刻を取得（フォールバック付き）
+   */
+  private async getExecutionTimestamp(dataPath: string): Promise<string> {
+    const logFilePath = path.join(dataPath, 'file_history_log.json');
+
+    try {
+      await this.fileSystem.access(logFilePath);
+      const logContent = await this.fileSystem.readFile(logFilePath, 'utf-8');
+      const logData = JSON.parse(logContent);
+
+      if (logData.timestamp) {
+        return logData.timestamp;
+      }
+    } catch (error) {
+      // ファイルが存在しない、読み取りエラー、JSON解析エラー、timestampフィールドなしの場合
+      // 全て現在時刻でフォールバック
+    }
+
+    return new Date().toISOString();
   }
 
   /**

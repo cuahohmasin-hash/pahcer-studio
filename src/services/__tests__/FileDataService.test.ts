@@ -112,7 +112,7 @@ save_path_list = ["src"]
     it('should get execution file data from directory', async () => {
       // Arrange
       const executionId = 'exec123';
-      const executionPath = '/mock/pahcer-studio/data/exec123';
+      const executionPath = '/mock/pahcer-studio/data/file_history/exec123';
 
       // 実行ディレクトリとファイルを追加
       mockFileSystem.addDirectory(executionPath);
@@ -149,7 +149,7 @@ save_path_list = ["src"]
     it('should throw error if execution path is not a directory', async () => {
       // Arrange
       const executionId = 'notdir';
-      const executionPath = '/mock/pahcer-studio/data/notdir';
+      const executionPath = '/mock/pahcer-studio/data/file_history/notdir';
 
       // ファイルとして追加（ディレクトリではない）
       mockFileSystem.addFile(executionPath, 'content', { size: 10 });
@@ -163,7 +163,7 @@ save_path_list = ["src"]
     it('should exclude log files from processing', async () => {
       // Arrange
       const executionId = 'exec123';
-      const executionPath = '/mock/pahcer-studio/data/exec123';
+      const executionPath = '/mock/pahcer-studio/data/file_history/exec123';
 
       // 実行ディレクトリとファイルを追加（ログファイルも含む）
       mockFileSystem.addDirectory(executionPath);
@@ -181,6 +181,174 @@ save_path_list = ["src"]
       expect(result.files.has('execution.log')).toBe(false);
       expect(result.files.has('file_history_log.json')).toBe(false);
       expect(result.files.has('execution_log.json')).toBe(false);
+    });
+
+    describe('timestamp retrieval from file_history_log.json', () => {
+      it('should use timestamp from file_history_log.json when available', async () => {
+        // Arrange
+        const executionId = 'exec123';
+        const executionPath = '/mock/pahcer-studio/data/file_history/exec123';
+        const expectedTimestamp = '2025-08-18T14:09:10.229Z';
+
+        const logContent = JSON.stringify({
+          timestamp: expectedTimestamp,
+          executionId: executionId,
+          savePathList: ['main.cpp'],
+          result: {
+            status: 'SUCCESS',
+            totalFiles: 1,
+            totalSize: 1000,
+            processedFiles: 1,
+            skippedFiles: [],
+            warnings: [],
+            errors: [],
+            executionTimeMs: 50,
+          },
+        });
+
+        // 実行ディレクトリとファイルを追加
+        mockFileSystem.addDirectory(executionPath);
+        mockFileSystem.addFile(`${executionPath}/main.cpp`, '// main content', { size: 100 });
+        mockFileSystem.addFile(`${executionPath}/file_history_log.json`, logContent, {
+          size: logContent.length,
+        });
+
+        // Act
+        const result = await service.getExecutionFileData(executionId);
+
+        // Assert
+        expect(result.execution.id).toBe(executionId);
+        expect(result.execution.timestamp).toBe(expectedTimestamp);
+        expect(result.execution.dataPath).toBe(executionPath);
+        expect(result.files.size).toBe(1);
+      });
+
+      it('should fallback to current time when file_history_log.json is missing', async () => {
+        // Arrange
+        const executionId = 'exec123';
+        const executionPath = '/mock/pahcer-studio/data/file_history/exec123';
+
+        // 実行ディレクトリとファイルを追加（ログファイルは除外）
+        mockFileSystem.addDirectory(executionPath);
+        mockFileSystem.addFile(`${executionPath}/main.cpp`, '// main content', { size: 100 });
+        // file_history_log.json は追加しない
+
+        const beforeTime = new Date();
+
+        // Act
+        const result = await service.getExecutionFileData(executionId);
+
+        const afterTime = new Date();
+        const resultTime = new Date(result.execution.timestamp);
+
+        // Assert - 現在時刻でフォールバック
+        expect(result.execution.id).toBe(executionId);
+        expect(resultTime.getTime()).toBeGreaterThanOrEqual(beforeTime.getTime());
+        expect(resultTime.getTime()).toBeLessThanOrEqual(afterTime.getTime());
+        expect(result.files.size).toBe(1);
+      });
+
+      it('should fallback to current time when file_history_log.json has invalid JSON', async () => {
+        // Arrange
+        const executionId = 'exec123';
+        const executionPath = '/mock/pahcer-studio/data/file_history/exec123';
+        const invalidJsonContent = '{ invalid json content';
+
+        // 実行ディレクトリとファイルを追加
+        mockFileSystem.addDirectory(executionPath);
+        mockFileSystem.addFile(`${executionPath}/main.cpp`, '// main content', { size: 100 });
+        mockFileSystem.addFile(`${executionPath}/file_history_log.json`, invalidJsonContent, {
+          size: invalidJsonContent.length,
+        });
+
+        const beforeTime = new Date();
+
+        // Act
+        const result = await service.getExecutionFileData(executionId);
+
+        const afterTime = new Date();
+        const resultTime = new Date(result.execution.timestamp);
+
+        // Assert - 現在時刻でフォールバック
+        expect(result.execution.id).toBe(executionId);
+        expect(resultTime.getTime()).toBeGreaterThanOrEqual(beforeTime.getTime());
+        expect(resultTime.getTime()).toBeLessThanOrEqual(afterTime.getTime());
+        expect(result.files.size).toBe(1);
+      });
+
+      it('should fallback to current time when file_history_log.json lacks timestamp field', async () => {
+        // Arrange
+        const executionId = 'exec123';
+        const executionPath = '/mock/pahcer-studio/data/file_history/exec123';
+
+        const logContentWithoutTimestamp = JSON.stringify({
+          executionId: executionId,
+          savePathList: ['main.cpp'],
+          result: {
+            status: 'SUCCESS',
+          },
+          // timestamp フィールドなし
+        });
+
+        // 実行ディレクトリとファイルを追加
+        mockFileSystem.addDirectory(executionPath);
+        mockFileSystem.addFile(`${executionPath}/main.cpp`, '// main content', { size: 100 });
+        mockFileSystem.addFile(
+          `${executionPath}/file_history_log.json`,
+          logContentWithoutTimestamp,
+          { size: logContentWithoutTimestamp.length },
+        );
+
+        const beforeTime = new Date();
+
+        // Act
+        const result = await service.getExecutionFileData(executionId);
+
+        const afterTime = new Date();
+        const resultTime = new Date(result.execution.timestamp);
+
+        // Assert - 現在時刻でフォールバック
+        expect(result.execution.id).toBe(executionId);
+        expect(resultTime.getTime()).toBeGreaterThanOrEqual(beforeTime.getTime());
+        expect(resultTime.getTime()).toBeLessThanOrEqual(afterTime.getTime());
+        expect(result.files.size).toBe(1);
+      });
+
+      it('should fallback to current time when file_history_log.json cannot be read', async () => {
+        // Arrange
+        const executionId = 'exec123';
+        const executionPath = '/mock/pahcer-studio/data/file_history/exec123';
+
+        // 実行ディレクトリとファイルを追加
+        mockFileSystem.addDirectory(executionPath);
+        mockFileSystem.addFile(`${executionPath}/main.cpp`, '// main content', { size: 100 });
+        mockFileSystem.addFile(`${executionPath}/file_history_log.json`, '{}', { size: 10 });
+
+        // readFileを特定のファイルでエラーにする
+        const originalReadFile = mockFileSystem.readFile;
+        mockFileSystem.readFile = jest
+          .fn()
+          .mockImplementation(async (path: string, encoding?: string) => {
+            if (path.endsWith('file_history_log.json')) {
+              throw new Error('Permission denied');
+            }
+            return originalReadFile.call(mockFileSystem, path, encoding || 'utf-8');
+          });
+
+        const beforeTime = new Date();
+
+        // Act
+        const result = await service.getExecutionFileData(executionId);
+
+        const afterTime = new Date();
+        const resultTime = new Date(result.execution.timestamp);
+
+        // Assert - 現在時刻でフォールバック
+        expect(result.execution.id).toBe(executionId);
+        expect(resultTime.getTime()).toBeGreaterThanOrEqual(beforeTime.getTime());
+        expect(resultTime.getTime()).toBeLessThanOrEqual(afterTime.getTime());
+        expect(result.files.size).toBe(1);
+      });
     });
   });
 
