@@ -12,9 +12,15 @@ const FileDiff: React.FC = () => {
   // State management
   const [executions, setExecutions] = useState<TestExecution[]>([]);
   const [executionsLoading, setExecutionsLoading] = useState(false);
-  const [selectedVersion1, setSelectedVersion1] = useState<string>('');
-  const [selectedVersion2, setSelectedVersion2] = useState<string>('');
+  const [selectedExecutions, setSelectedExecutions] = useState<string[]>([]);
   const [useLatest, setUseLatest] = useState(false);
+
+  const handleUseLatestChange = (value: boolean) => {
+    setUseLatest(value);
+    // useLatest切り替え時に選択をリセット
+    setSelectedExecutions([]);
+    setDiffResult(null);
+  };
   const [diffResult, setDiffResult] = useState<DiffResult | null>(null);
   const [selectedFilePath, setSelectedFilePath] = useState<string>('');
   const [diffLoading, setDiffLoading] = useState(false);
@@ -39,8 +45,13 @@ const FileDiff: React.FC = () => {
   };
 
   const handleCompare = async () => {
-    if (!selectedVersion1 || (!selectedVersion2 && !useLatest)) {
-      setError('比較するバージョンを選択してください');
+    if (useLatest && selectedExecutions.length !== 1) {
+      setError('比較するバージョンを1つ選択してください');
+      return;
+    }
+    
+    if (!useLatest && selectedExecutions.length !== 2) {
+      setError('比較するバージョンを2つ選択してください');
       return;
     }
 
@@ -49,9 +60,10 @@ const FileDiff: React.FC = () => {
     try {
       let result: DiffResult;
       if (useLatest) {
-        result = await window.electronAPI.diff.getDiffWithLatest(selectedVersion1);
+        result = await window.electronAPI.diff.getDiffWithLatest(selectedExecutions[0]);
       } else {
-        result = await window.electronAPI.diff.getDiff(selectedVersion1, selectedVersion2);
+        // 2つの実行比較（バックエンドで自動的に時刻順判別）
+        result = await window.electronAPI.diff.getDiff(selectedExecutions[0], selectedExecutions[1]);
       }
       setDiffResult(result);
 
@@ -91,12 +103,10 @@ const FileDiff: React.FC = () => {
               <VersionSelector
                 executions={executions}
                 executionsLoading={executionsLoading}
-                selectedVersion1={selectedVersion1}
-                selectedVersion2={selectedVersion2}
+                selectedExecutions={selectedExecutions}
                 useLatest={useLatest}
-                onVersion1Change={setSelectedVersion1}
-                onVersion2Change={setSelectedVersion2}
-                onUseLatestChange={setUseLatest}
+                onExecutionsChange={setSelectedExecutions}
+                onUseLatestChange={handleUseLatestChange}
                 onCompare={handleCompare}
                 onRefresh={loadExecutions}
                 comparing={diffLoading}

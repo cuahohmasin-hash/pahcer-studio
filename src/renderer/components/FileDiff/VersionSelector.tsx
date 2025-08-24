@@ -17,6 +17,7 @@ import {
   Typography,
   Chip,
   Divider,
+  Checkbox,
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
@@ -25,11 +26,9 @@ import type { TestExecution } from '../../../schemas/execution';
 interface VersionSelectorProps {
   executions: TestExecution[];
   executionsLoading: boolean;
-  selectedVersion1: string;
-  selectedVersion2: string;
+  selectedExecutions: string[];
   useLatest: boolean;
-  onVersion1Change: (value: string) => void;
-  onVersion2Change: (value: string) => void;
+  onExecutionsChange: (executionIds: string[]) => void;
   onUseLatestChange: (value: boolean) => void;
   onCompare: () => void;
   onRefresh: () => void;
@@ -39,11 +38,9 @@ interface VersionSelectorProps {
 const VersionSelector: React.FC<VersionSelectorProps> = ({
   executions,
   executionsLoading,
-  selectedVersion1,
-  selectedVersion2,
+  selectedExecutions,
   useLatest,
-  onVersion1Change,
-  onVersion2Change,
+  onExecutionsChange,
   onUseLatestChange,
   onCompare,
   onRefresh,
@@ -77,7 +74,30 @@ const VersionSelector: React.FC<VersionSelectorProps> = ({
     }
   };
 
-  const canCompare = selectedVersion1 && (selectedVersion2 || useLatest);
+  const canCompare = useLatest 
+    ? selectedExecutions.length === 1 
+    : selectedExecutions.length === 2;
+
+  const handleExecutionToggle = (executionId: string) => {
+    if (selectedExecutions.includes(executionId)) {
+      // 選択解除
+      const newSelection = selectedExecutions.filter(id => id !== executionId);
+      onExecutionsChange(newSelection);
+    } else {
+      // 新規選択
+      const maxSelections = useLatest ? 1 : 2;
+      if (selectedExecutions.length < maxSelections) {
+        const newSelection = [...selectedExecutions, executionId];
+        onExecutionsChange(newSelection);
+        
+        // 必要数選択されたら自動的に比較実行
+        if ((useLatest && newSelection.length === 1) || 
+            (!useLatest && newSelection.length === 2)) {
+          setTimeout(() => onCompare(), 100); // 少し遅延させてUI更新を先に
+        }
+      }
+    }
+  };
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -153,28 +173,28 @@ const VersionSelector: React.FC<VersionSelectorProps> = ({
               </TableCell>
               <TableCell sx={{ width: 70 }}>状態</TableCell>
               <TableCell align="center" sx={{ width: 50 }}>
-                元
-              </TableCell>
-              <TableCell align="center" sx={{ width: 50 }}>
-                {useLatest ? '比較' : '先'}
+                選択
               </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {executions.map((execution) => {
-              const isSelected1 = selectedVersion1 === execution.id;
-              const isSelected2 = selectedVersion2 === execution.id;
-              const isAnySelected = isSelected1 || isSelected2;
+              const isSelected = selectedExecutions.includes(execution.id || '');
+              const maxSelections = useLatest ? 1 : 2;
+              const canSelect = selectedExecutions.length < maxSelections || isSelected;
 
               return (
                 <TableRow
                   key={execution.id}
                   sx={{
                     height: 32,
-                    backgroundColor: isAnySelected ? 'primary.50' : 'inherit',
+                    backgroundColor: isSelected ? 'primary.50' : 'inherit',
                     '&:hover': {
-                      backgroundColor: isAnySelected ? 'primary.100' : 'grey.50',
+                      backgroundColor: canSelect 
+                        ? (isSelected ? 'primary.100' : 'grey.50')
+                        : 'inherit',
                     },
+                    opacity: canSelect ? 1 : 0.5,
                   }}
                 >
                   <TableCell>
@@ -230,28 +250,12 @@ const VersionSelector: React.FC<VersionSelectorProps> = ({
                   </TableCell>
 
                   <TableCell align="center" sx={{ p: 0 }}>
-                    <Radio
-                      checked={isSelected1}
-                      onChange={() => onVersion1Change(execution.id || '')}
-                      disabled={executionsLoading}
-                      size="small"
-                      color="primary"
-                      sx={{ p: 0.5 }}
-                    />
-                  </TableCell>
-
-                  <TableCell align="center" sx={{ p: 0 }}>
                     {useLatest ? (
                       <Button
-                        variant={isSelected1 ? 'contained' : 'outlined'}
+                        variant={isSelected ? 'contained' : 'outlined'}
                         size="small"
-                        onClick={() => {
-                          onVersion1Change(execution.id || '');
-                          if (!comparing && execution.id) {
-                            onCompare();
-                          }
-                        }}
-                        disabled={executionsLoading || comparing}
+                        onClick={() => handleExecutionToggle(execution.id || '')}
+                        disabled={executionsLoading || comparing || !canSelect}
                         sx={{
                           minWidth: 36,
                           height: 20,
@@ -262,12 +266,12 @@ const VersionSelector: React.FC<VersionSelectorProps> = ({
                         比較
                       </Button>
                     ) : (
-                      <Radio
-                        checked={isSelected2}
-                        onChange={() => onVersion2Change(execution.id || '')}
-                        disabled={executionsLoading || execution.id === selectedVersion1}
+                      <Checkbox
+                        checked={isSelected}
+                        onChange={() => handleExecutionToggle(execution.id || '')}
+                        disabled={executionsLoading || comparing || !canSelect}
                         size="small"
-                        color="secondary"
+                        color="primary"
                         sx={{ p: 0.5 }}
                       />
                     )}
