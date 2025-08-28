@@ -10,8 +10,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Radio,
-  RadioGroup,
   FormControlLabel,
   Switch,
   Typography,
@@ -74,14 +72,12 @@ const VersionSelector: React.FC<VersionSelectorProps> = ({
     }
   };
 
-  const canCompare = useLatest 
-    ? selectedExecutions.length === 1 
-    : selectedExecutions.length === 2;
+  const canCompare = useLatest ? selectedExecutions.length === 1 : selectedExecutions.length === 2;
 
   const handleExecutionToggle = (executionId: string) => {
     if (selectedExecutions.includes(executionId)) {
       // 選択解除
-      const newSelection = selectedExecutions.filter(id => id !== executionId);
+      const newSelection = selectedExecutions.filter((id) => id !== executionId);
       onExecutionsChange(newSelection);
     } else {
       // 新規選択
@@ -89,10 +85,9 @@ const VersionSelector: React.FC<VersionSelectorProps> = ({
       if (selectedExecutions.length < maxSelections) {
         const newSelection = [...selectedExecutions, executionId];
         onExecutionsChange(newSelection);
-        
+
         // 必要数選択されたら自動的に比較実行
-        if ((useLatest && newSelection.length === 1) || 
-            (!useLatest && newSelection.length === 2)) {
+        if ((useLatest && newSelection.length === 1) || (!useLatest && newSelection.length === 2)) {
           setTimeout(() => onCompare(), 100); // 少し遅延させてUI更新を先に
         }
       }
@@ -190,8 +185,10 @@ const VersionSelector: React.FC<VersionSelectorProps> = ({
                     height: 32,
                     backgroundColor: isSelected ? 'primary.50' : 'inherit',
                     '&:hover': {
-                      backgroundColor: canSelect 
-                        ? (isSelected ? 'primary.100' : 'grey.50')
+                      backgroundColor: canSelect
+                        ? isSelected
+                          ? 'primary.100'
+                          : 'grey.50'
                         : 'inherit',
                     },
                     opacity: canSelect ? 1 : 0.5,

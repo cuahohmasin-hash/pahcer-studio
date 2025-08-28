@@ -1,6 +1,6 @@
 import type React from 'react';
 import { useState, useEffect } from 'react';
-import { Box, Paper, Typography, Alert } from '@mui/material';
+import { Box, Paper, Typography, Alert, Chip } from '@mui/material';
 import { Allotment } from 'allotment';
 import type { DiffResult } from '../../../services/DiffCalculationService';
 import type { TestExecution } from '../../../schemas/execution';
@@ -49,7 +49,7 @@ const FileDiff: React.FC = () => {
       setError('比較するバージョンを1つ選択してください');
       return;
     }
-    
+
     if (!useLatest && selectedExecutions.length !== 2) {
       setError('比較するバージョンを2つ選択してください');
       return;
@@ -63,7 +63,10 @@ const FileDiff: React.FC = () => {
         result = await window.electronAPI.diff.getDiffWithLatest(selectedExecutions[0]);
       } else {
         // 2つの実行比較（バックエンドで自動的に時刻順判別）
-        result = await window.electronAPI.diff.getDiff(selectedExecutions[0], selectedExecutions[1]);
+        result = await window.electronAPI.diff.getDiff(
+          selectedExecutions[0],
+          selectedExecutions[1],
+        );
       }
       setDiffResult(result);
 
@@ -81,6 +84,89 @@ const FileDiff: React.FC = () => {
 
   const selectedFile = diffResult?.changedFiles.find((file) => file.path === selectedFilePath);
 
+  // 時刻フォーマット関数
+  const formatDateTime = (timestamp: string) => {
+    return new Date(timestamp).toLocaleString('ja-JP', {
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+  };
+
+  // 時間差計算
+  const getTimeDiff = (older: string, newer: string) => {
+    const diffMs = new Date(newer).getTime() - new Date(older).getTime();
+    const diffMinutes = Math.floor(diffMs / 60000);
+    const diffSeconds = Math.floor((diffMs % 60000) / 1000);
+
+    if (diffMinutes > 0) {
+      return `${diffMinutes}分${diffSeconds}秒`;
+    } else {
+      return `${diffSeconds}秒`;
+    }
+  };
+
+  // 比較情報コンポーネント
+  const ComparisonInfo: React.FC<{ diffResult: DiffResult }> = ({ diffResult }) => (
+    <Paper sx={{ mb: 2, p: 2, bgcolor: 'info.50', borderRadius: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+          比較結果:
+        </Typography>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Chip
+            label={`${diffResult.olderExecution.id.substring(0, 8)}`}
+            size="small"
+            color="default"
+            variant="outlined"
+            sx={{ fontSize: '0.7rem' }}
+          />
+          <Typography variant="body2" color="text.secondary">
+            {formatDateTime(diffResult.olderExecution.timestamp)}
+          </Typography>
+        </Box>
+
+        <Typography variant="body2" color="primary" sx={{ fontWeight: 'bold' }}>
+          →
+        </Typography>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Chip
+            label={
+              diffResult.newerExecution.id === 'current'
+                ? '現在'
+                : `${diffResult.newerExecution.id.substring(0, 8)}`
+            }
+            size="small"
+            color="primary"
+            variant="outlined"
+            sx={{ fontSize: '0.7rem' }}
+          />
+          <Typography variant="body2" color="text.secondary">
+            {formatDateTime(diffResult.newerExecution.timestamp)}
+          </Typography>
+        </Box>
+
+        <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="caption" color="text.secondary">
+            時間差:{' '}
+            {getTimeDiff(diffResult.olderExecution.timestamp, diffResult.newerExecution.timestamp)}
+          </Typography>
+          <Chip
+            label={`${diffResult.stats.modifiedFiles}件変更`}
+            size="small"
+            color="warning"
+            variant="filled"
+            sx={{ fontSize: '0.7rem' }}
+          />
+        </Box>
+      </Box>
+    </Paper>
+  );
+
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Paper sx={{ p: 2, mb: 2 }}>
@@ -94,6 +180,9 @@ const FileDiff: React.FC = () => {
           </Alert>
         )}
       </Paper>
+
+      {/* 比較情報表示 */}
+      {diffResult && <ComparisonInfo diffResult={diffResult} />}
 
       <Box sx={{ flexGrow: 1, minHeight: 0 }}>
         <Allotment defaultSizes={[35, 65]} vertical={false}>
