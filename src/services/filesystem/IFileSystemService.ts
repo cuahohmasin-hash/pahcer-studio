@@ -74,4 +74,12 @@ export interface IFileSystemService {
     isDirectory: () => boolean;
     mtime: Date;
   }>;
+
+  /**
+   * ファイルまたはディレクトリを削除します
+   *
+   * @param path - 削除するパス
+   * @param options - オプション（recursive: 再帰的に削除、force: エラーを無視）
+   */
+  rm(path: string, options?: { recursive?: boolean; force?: boolean }): Promise<void>;
 }

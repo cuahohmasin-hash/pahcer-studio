@@ -133,6 +133,51 @@ export class MockFileSystemService implements IFileSystemService {
     };
   }
 
+  async rm(filepath: string, options?: { recursive?: boolean; force?: boolean }): Promise<void> {
+    const normalized = this.normalizePath(filepath);
+
+    const isFile = this.files.has(normalized);
+    const isDir = this.directories.has(normalized);
+
+    if (!isFile && !isDir) {
+      if (!options?.force) {
+        throw this.createError('ENOENT', `no such file or directory, rm '${filepath}'`);
+      }
+      return;
+    }
+
+    if (isFile) {
+      this.files.delete(normalized);
+    }
+
+    if (isDir) {
+      if (options?.recursive) {
+        // 再帰的に削除
+        const toDelete: string[] = [];
+        for (const file of this.files.keys()) {
+          if (file.startsWith(normalized + '/')) {
+            toDelete.push(file);
+          }
+        }
+        for (const file of toDelete) {
+          this.files.delete(file);
+        }
+
+        const dirsToDelete: string[] = [];
+        for (const dir of this.directories) {
+          if (dir.startsWith(normalized + '/') || dir === normalized) {
+            dirsToDelete.push(dir);
+          }
+        }
+        for (const dir of dirsToDelete) {
+          this.directories.delete(dir);
+        }
+      } else {
+        this.directories.delete(normalized);
+      }
+    }
+  }
+
   // ========================================
   // テスト用ヘルパーメソッド
   // ========================================

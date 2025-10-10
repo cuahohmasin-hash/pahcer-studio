@@ -38,4 +38,8 @@ export class FileSystemService implements IFileSystemService {
       mtime: stats.mtime,
     };
   }
+
+  async rm(path: string, options?: { recursive?: boolean; force?: boolean }): Promise<void> {
+    await fs.rm(path, options);
+  }
 }
