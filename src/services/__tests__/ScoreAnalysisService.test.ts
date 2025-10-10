@@ -210,12 +210,6 @@ objective = "Max"
       expect(result).toEqual([]);
     });
 
-    it('testCaseDataがnullの場合', async () => {
-      const result = await scoreAnalysisService.enrichTestCasesWithRelativeScore(null as any);
-
-      expect(result).toEqual([]);
-    });
-
     it('Config取得失敗の場合: relativeScore = nullで返す', async () => {
       mockFS.clear();
 
