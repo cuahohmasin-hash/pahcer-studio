@@ -2,6 +2,9 @@ import type React from 'react';
 import { useState } from 'react';
 // 上のインポート群に混ぜる
 import CodeIcon from '@mui/icons-material/Code';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import TrendingDownIcon from '@mui/icons-material/TrendingDown';
+import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered';
 import {
   Paper,
   Table,
@@ -22,6 +25,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Alert,
 } from '@mui/material';
 import type { TestExecution, TestExecutionStatus } from '../../../schemas/execution';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -58,6 +62,10 @@ const TestHistoryTable: React.FC<TestHistoryTableProps> = ({
   // --- コード表示用の状態 ---
   const [codeDialogOpen, setCodeDialogOpen] = useState(false);
   const [currentCode, setCurrentCode] = useState<string>('');
+  // --- デグレチェック用の状態 ---
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [degradedCases, setDegradedCases] = useState<any[]>([]);
+  const [detailsLoading, setDetailsLoading] = useState(false);
   // テーブルヘッダーの定義
   const columnDefinitions = [
     {
@@ -126,6 +134,15 @@ const TestHistoryTable: React.FC<TestHistoryTableProps> = ({
       tooltip: '当時のソースコード',
       icon: <CodeIcon fontSize="small" sx={{ opacity: 0.6 }} />,
     },
+    // 👇ここから追加👇
+    {
+      key: 'details',
+      label: '詳細',
+      minWidth: 60,
+      tooltip: 'デグレ（悪化）ケースの確認',
+      icon: <FormatListNumberedIcon fontSize="small" sx={{ opacity: 0.6 }} />,
+    },
+    // 👆ここまで👆
     {
       key: 'actions',
       label: '操作',
@@ -191,7 +208,54 @@ const TestHistoryTable: React.FC<TestHistoryTableProps> = ({
       onError('この実行時のソースコード（バックアップ）が見つかりません。');
     }
   };
+  // --- デグレケースを抽出して表示する処理 ---
+  const handleViewDetails = async (event: React.MouseEvent, execution: TestExecution) => {
+    event.stopPropagation();
+    setDetailsDialogOpen(true);
+    setDetailsLoading(true);
+    setDegradedCases([]);
 
+    try {
+      // ① 今の実行のケース一覧を取得
+      const currentCases = await window.electronAPI.execution.getTestCases(execution.id);
+      
+      // ② 1つ前の実行データを探す
+      const globalIndex = executions.findIndex(e => e.id === execution.id);
+      const prevExecution = executions[globalIndex + 1];
+
+      let badCases: any[] = [];
+
+      if (prevExecution) {
+        // ③ 1つ前の実行のケース一覧も取得
+        const prevCases = await window.electronAPI.execution.getTestCases(prevExecution.id);
+        
+        // ④ 突き合わせて、スコアが10%以上悪化したものを抽出 (AHC063はスコアが小さいほど良い)
+        currentCases.forEach((currentCase: any) => {
+          const prevCase = prevCases.find((p: any) => p.seed === currentCase.seed);
+          if (prevCase && currentCase.score && prevCase.score) {
+            // 悪化率の計算: (今のスコア - 前のスコア) / 前のスコア
+            const diffRatio = (currentCase.score - prevCase.score) / prevCase.score;
+            
+            // 10% (0.10) 以上スコアが増加（悪化）していたらリスト入り！
+            if (diffRatio >= 0.10) {
+              badCases.push({
+                seed: currentCase.seed,
+                currentScore: currentCase.score,
+                prevScore: prevCase.score,
+                worsePercent: (diffRatio * 100).toFixed(1)
+              });
+            }
+          }
+        });
+      }
+
+      setDegradedCases(badCases);
+    } catch (err) {
+      onError('テストケースの詳細取得に失敗しました');
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
   const handleCloseCodeDialog = () => {
     setCodeDialogOpen(false);
     setCurrentCode('');
@@ -328,7 +392,46 @@ const TestHistoryTable: React.FC<TestHistoryTableProps> = ({
                   />
                 </TableCell>
                 <TableCell sx={{ py: 0.5, px: 1 }}>
-                  {execution.averageScore ? execution.averageScore.toExponential(2) : '-'}
+                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                    <Box sx={{ fontFamily: 'monospace' }}>
+                      {execution.averageScore ? execution.averageScore.toExponential(2) : '-'}
+                    </Box>
+                    {(() => {
+                      // 全履歴の中から今のデータの位置を探し、1つ古いデータ(インデックス+1)を取得
+                      const globalIndex = executions.findIndex(e => e.id === execution.id);
+                      const prevExecution = executions[globalIndex + 1];
+
+                      if (execution.averageScore && prevExecution?.averageScore) {
+                        const diff = execution.averageScore - prevExecution.averageScore;
+                        const isImproved = diff < 0; // AHC063はスコアが小さい方が良いので「負」なら改善
+                        const absDiff = Math.abs(diff);
+                        const percent = (absDiff / prevExecution.averageScore) * 100;
+
+                        if (absDiff === 0) return null; // 変化なしなら何も出さない
+
+                        return (
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              fontSize: '0.75rem',
+                              color: isImproved ? 'success.main' : 'error.main', // 緑か赤
+                              fontWeight: 'bold',
+                              mt: 0.5
+                            }}
+                          >
+                            {isImproved ? (
+                              <TrendingDownIcon sx={{ fontSize: 14, mr: 0.5 }} />
+                            ) : (
+                              <TrendingUpIcon sx={{ fontSize: 14, mr: 0.5 }} />
+                            )}
+                            {isImproved ? '-' : '+'}{percent.toFixed(2)}%
+                          </Box>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </Box>
                 </TableCell>
                 <TableCell sx={{ py: 0.5, px: 1 }}>
                   {execution.averageRelativeScore !== undefined &&
@@ -363,6 +466,21 @@ const TestHistoryTable: React.FC<TestHistoryTableProps> = ({
                     </span>
                   </Tooltip>
                 </TableCell>
+                {/* 👇ここから追加：デグレチェックボタン👇 */}
+                <TableCell sx={{ py: 0.5, px: 1 }}>
+                  <Tooltip title="デグレ（悪化）チェック" disableFocusListener>
+                    <span>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => handleViewDetails(e, execution)}
+                        color="warning" // 目立つようにオレンジ色に！
+                      >
+                        <FormatListNumberedIcon fontSize="small" />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                </TableCell>
+                {/* 👆ここまで👆 */}
                 <TableCell sx={{ py: 0.5, px: 1 }}>
                   <Tooltip title="削除" disableFocusListener>
                     <IconButton
@@ -444,6 +562,67 @@ const TestHistoryTable: React.FC<TestHistoryTableProps> = ({
           </Button>
         </DialogActions>
       </Dialog>
+      {/* 👇ここから追加：デグレ詳細ダイアログ👇 */}
+      <Dialog
+        open={detailsDialogOpen}
+        onClose={() => setDetailsDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <FormatListNumberedIcon color="warning" />
+          デグレ（10%以上悪化）ケース一覧
+        </DialogTitle>
+        <DialogContent dividers>
+          {detailsLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : degradedCases.length === 0 ? (
+            <Alert severity="success" sx={{ mt: 2 }}>
+              素晴らしい！前回と比較して、10%以上悪化したケースはありません！✨
+            </Alert>
+          ) : (
+            <>
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {degradedCases.length} 個のケースでデグレ（10%以上の悪化）が検出されました！
+              </Alert>
+              <TableContainer component={Paper} variant="outlined">
+                <Table size="small" stickyHeader>
+                  <TableHead>
+                    <TableRow sx={{ backgroundColor: 'rgba(0, 0, 0, 0.04)' }}>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Seed</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>前回スコア</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>今回スコア</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>悪化率</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {degradedCases.map((c) => (
+                      <TableRow key={c.seed} hover>
+                        <TableCell sx={{ fontFamily: 'monospace', fontWeight: 'bold' }}>
+                          {String(c.seed).padStart(4, '0')}
+                        </TableCell>
+                        <TableCell sx={{ fontFamily: 'monospace' }}>{c.prevScore}</TableCell>
+                        <TableCell sx={{ fontFamily: 'monospace' }}>{c.currentScore}</TableCell>
+                        <TableCell sx={{ color: 'error.main', fontWeight: 'bold' }}>
+                          +{c.worsePercent}%
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDetailsDialogOpen(false)} color="primary">
+            閉じる
+          </Button>
+        </DialogActions>
+      </Dialog>
+      {/* 👆ここまで👆 */}
     </Paper>
   );
 };
