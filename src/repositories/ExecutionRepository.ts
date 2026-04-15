@@ -238,7 +238,13 @@ export class ExecutionRepository implements IExecutionRepository {
       };
     }
 
+    // 👇 ここを変更：元の sourceCodePath が存在し、新しい data に無い場合は保持する
+    const existingSourcePath = execution.sourceCodePath;
     Object.assign(execution, data);
+    if (existingSourcePath && !data.sourceCodePath) {
+      execution.sourceCodePath = existingSourcePath;
+    }
+
     await this.save(execution);
   }
 
@@ -272,6 +278,7 @@ export class ExecutionRepository implements IExecutionRepository {
       averageScore: stats.averageScore,
       averageRelativeScore: stats.averageRelativeScore,
       maxExecutionTime: stats.maxExecutionTime,
+      sourceCodePath: execution.sourceCodePath, // 👈 これを追加！確実に引き継ぐ
     };
   }
 }

@@ -100,16 +100,17 @@ ipcMain.handle('execution:delete', async (event, executionId: string) => {
   await executionService.deleteExecution(executionId);
 });
 // --- 👇 ここから追加：ソースコードを読み込んでフロントに返す処理 👇 ---
-ipcMain.handle('execution:getSourceCode', async (event, sourceCodePath: string) => {
+ipcMain.handle('execution:getSourceCode', async (event, executionId: string) => {
   try {
-    // backupsフォルダの中にある指定されたファイルを探す
-    const filePath = path.join(process.cwd(), 'backups', sourceCodePath);
+    // 📝 変更: 受け取った実行IDから、ファイル名を直接組み立てる！
+    const fileName = `main_${executionId}.cpp`;
+    const filePath = path.join(process.cwd(), 'backups', fileName);
     
     // ファイルが存在するか確認
     try {
       await fsPromises.access(filePath);
     } catch {
-      throw new Error(`ファイルが見つかりません: ${sourceCodePath}`);
+      throw new Error(`ファイルが見つかりません: ${fileName}`);
     }
 
     // テキストとして読み込んで返す

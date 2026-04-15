@@ -182,17 +182,13 @@ const TestHistoryTable: React.FC<TestHistoryTableProps> = ({
   // --- コードを表示する処理 ---
   const handleViewCode = async (event: React.MouseEvent, execution: TestExecution) => {
     event.stopPropagation(); // 行クリックイベントを止める
-    if (execution.sourceCodePath) {
-      try {
-        // メインプロセスにファイルを読み込んでもらう（Step 3で実装します）
-        const code = await window.electronAPI.execution.getSourceCode(execution.sourceCodePath);
-        setCurrentCode(code);
-        setCodeDialogOpen(true);
-      } catch (err) {
-        onError('コードの読み込みに失敗しました');
-      }
-    } else {
-      onError('この実行にはバックアップされたコードがありません');
+    try {
+      // 📝 変更: パスではなく「実行ID」をそのままメインプロセスに渡す！
+      const code = await window.electronAPI.execution.getSourceCode(execution.id);
+      setCurrentCode(code);
+      setCodeDialogOpen(true);
+    } catch (err) {
+      onError('この実行時のソースコード（バックアップ）が見つかりません。');
     }
   };
 
@@ -360,8 +356,7 @@ const TestHistoryTable: React.FC<TestHistoryTableProps> = ({
                       <IconButton
                         size="small"
                         onClick={(e) => handleViewCode(e, execution)}
-                        disabled={!execution.sourceCodePath}
-                        color={execution.sourceCodePath ? 'primary' : 'default'}
+                        color="primary" // 常に青くしておく！
                       >
                         <CodeIcon fontSize="small" />
                       </IconButton>
