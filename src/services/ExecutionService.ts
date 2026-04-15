@@ -1,5 +1,7 @@
 import { EventEmitter } from 'events';
 import { v4 as uuidv4 } from 'uuid';
+import * as fs from 'fs';       // ← これを追加
+import * as path from 'path';   // ← これを追加
 import type {
   TestExecution,
   TestExecutionRequest,
@@ -32,8 +34,38 @@ export class ExecutionService extends EventEmitter {
   /**
    * テスト実行を開始する
    */
+  /**
+   * テスト実行を開始する
+   */
   async startExecution(request: TestExecutionRequest): Promise<string> {
     const executionId = `${uuidv4()}`;
+
+    // 👇 バックアップファイル名を下まで持ち越すための変数をここで準備
+    let savedBackupFileName: string | null = null;
+
+    // --- 👇 ソースコードの自動バックアップ機能 👇 ---
+    try {
+      const sourcePath = path.join(process.cwd(), '../main.cpp');
+      const backupDir = path.join(process.cwd(), 'backups');
+
+      if (fs.existsSync(sourcePath)) {
+        if (!fs.existsSync(backupDir)) {
+          fs.mkdirSync(backupDir, { recursive: true });
+        }
+        const backupFileName = `main_${executionId}.cpp`; // ファイル名を作成
+        const backupPath = path.join(backupDir, backupFileName);
+        fs.copyFileSync(sourcePath, backupPath);
+        
+        savedBackupFileName = backupFileName; // 👈 作ったファイル名を変数に保存！
+        
+        this.emitLog(executionId, 'info', `ソースコードをバックアップしました: ${backupFileName}`);
+      } else {
+        this.emitLog(executionId, 'warn', `main.cpp が見つからないためバックアップをスキップします`);
+      }
+    } catch (error) {
+      this.emitLog(executionId, 'error', `バックアップに失敗しました: ${error}`);
+    }
+    // --- 👆 追加ここまで 👆 ---
 
     // Python側と同じように、pahcer_config.tomlを更新
     this.emitLog(executionId, 'info', 'Updating pahcer_config.toml for test execution...');
@@ -59,8 +91,6 @@ export class ExecutionService extends EventEmitter {
     }
 
     // リポジトリに初期状態を保存させる。
-    // ProcessManagerが実行前にexecution_info.jsonを作成するが、
-    // ここでもリポジトリ層に初期データを渡しておく。
     const initialExecution: TestExecution = {
       id: executionId,
       status: 'IDLE',
@@ -71,6 +101,7 @@ export class ExecutionService extends EventEmitter {
       acceptedCount: null,
       totalCount: request.testCaseCount,
       maxExecutionTime: null,
+      sourceCodePath: savedBackupFileName, // 👈 ここでさっき保存したファイル名を紐付ける！
     };
     await this.executionRepository.save(initialExecution);
 

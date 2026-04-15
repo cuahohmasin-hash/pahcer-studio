@@ -38,6 +38,7 @@ export const TestExecutionSchema = z.object({
   acceptedCount: z.number().int().optional().nullable(),
   totalCount: z.number().int().optional().nullable(),
   maxExecutionTime: z.number().optional().nullable(), // Milliseconds
+  sourceCodePath: z.string().optional().nullable(), // <--- これを追加！
 });
 
 /**

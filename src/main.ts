@@ -99,7 +99,28 @@ ipcMain.handle(
 ipcMain.handle('execution:delete', async (event, executionId: string) => {
   await executionService.deleteExecution(executionId);
 });
+// --- 👇 ここから追加：ソースコードを読み込んでフロントに返す処理 👇 ---
+ipcMain.handle('execution:getSourceCode', async (event, sourceCodePath: string) => {
+  try {
+    // backupsフォルダの中にある指定されたファイルを探す
+    const filePath = path.join(process.cwd(), 'backups', sourceCodePath);
+    
+    // ファイルが存在するか確認
+    try {
+      await fsPromises.access(filePath);
+    } catch {
+      throw new Error(`ファイルが見つかりません: ${sourceCodePath}`);
+    }
 
+    // テキストとして読み込んで返す
+    const code = await fsPromises.readFile(filePath, 'utf-8');
+    return code;
+  } catch (error) {
+    console.error('Failed to read source code:', error);
+    throw error;
+  }
+});
+// --- 👆 追加ここまで 👆 ---
 // 分析関連のIPCハンドラー
 ipcMain.handle('analysis:analyze', async (event, request: AnalysisRequest) => {
   return await analysisService.analyze(request);

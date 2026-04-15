@@ -1,5 +1,7 @@
 import type React from 'react';
 import { useState } from 'react';
+// 上のインポート群に混ぜる
+import CodeIcon from '@mui/icons-material/Code';
 import {
   Paper,
   Table,
@@ -53,7 +55,9 @@ const TestHistoryTable: React.FC<TestHistoryTableProps> = ({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [executionToDelete, setExecutionToDelete] = useState<TestExecution | null>(null);
   const [deleting, setDeleting] = useState(false);
-
+  // --- コード表示用の状態 ---
+  const [codeDialogOpen, setCodeDialogOpen] = useState(false);
+  const [currentCode, setCurrentCode] = useState<string>('');
   // テーブルヘッダーの定義
   const columnDefinitions = [
     {
@@ -116,6 +120,13 @@ const TestHistoryTable: React.FC<TestHistoryTableProps> = ({
       icon: <PlaylistAddCheckIcon fontSize="small" sx={{ opacity: 0.6 }} />,
     },
     {
+      key: 'code',
+      label: 'コード',
+      minWidth: 60,
+      tooltip: '当時のソースコード',
+      icon: <CodeIcon fontSize="small" sx={{ opacity: 0.6 }} />,
+    },
+    {
       key: 'actions',
       label: '操作',
       minWidth: 60,
@@ -168,7 +179,27 @@ const TestHistoryTable: React.FC<TestHistoryTableProps> = ({
     setDeleteDialogOpen(false);
     setExecutionToDelete(null);
   };
+  // --- コードを表示する処理 ---
+  const handleViewCode = async (event: React.MouseEvent, execution: TestExecution) => {
+    event.stopPropagation(); // 行クリックイベントを止める
+    if (execution.sourceCodePath) {
+      try {
+        // メインプロセスにファイルを読み込んでもらう（Step 3で実装します）
+        const code = await window.electronAPI.execution.getSourceCode(execution.sourceCodePath);
+        setCurrentCode(code);
+        setCodeDialogOpen(true);
+      } catch (err) {
+        onError('コードの読み込みに失敗しました');
+      }
+    } else {
+      onError('この実行にはバックアップされたコードがありません');
+    }
+  };
 
+  const handleCloseCodeDialog = () => {
+    setCodeDialogOpen(false);
+    setCurrentCode('');
+  };
   const getStatusColor = (status: TestExecutionStatus | undefined) => {
     switch (status) {
       case 'COMPLETED':
@@ -322,6 +353,21 @@ const TestHistoryTable: React.FC<TestHistoryTableProps> = ({
                     ? `${execution.acceptedCount}/${execution.totalCount}`
                     : '-'}
                 </TableCell>
+                {/* コード表示ボタン */}
+                <TableCell sx={{ py: 0.5, px: 1 }}>
+                  <Tooltip title="コードを表示" disableFocusListener>
+                    <span>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => handleViewCode(e, execution)}
+                        disabled={!execution.sourceCodePath}
+                        color={execution.sourceCodePath ? 'primary' : 'default'}
+                      >
+                        <CodeIcon fontSize="small" />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                </TableCell>
                 <TableCell sx={{ py: 0.5, px: 1 }}>
                   <Tooltip title="削除" disableFocusListener>
                     <IconButton
@@ -374,6 +420,32 @@ const TestHistoryTable: React.FC<TestHistoryTableProps> = ({
           </Button>
           <Button onClick={handleDeleteConfirm} color="error" disabled={deleting}>
             {deleting ? <CircularProgress size={16} /> : '削除'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      {/* Code Viewer Dialog */}
+      <Dialog
+        open={codeDialogOpen}
+        onClose={handleCloseCodeDialog}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle>ソースコードの確認</DialogTitle>
+        <DialogContent dividers sx={{ backgroundColor: '#1e1e1e', color: '#d4d4d4', p: 0 }}>
+          <Box sx={{ p: 2, overflowX: 'auto', fontFamily: 'monospace', fontSize: '14px', whiteSpace: 'pre-wrap' }}>
+            {currentCode}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseCodeDialog}>閉じる</Button>
+          <Button 
+            onClick={() => {
+              navigator.clipboard.writeText(currentCode);
+              // ここに「コピーしました」のトースト通知を出せると完璧です
+            }} 
+            color="primary"
+          >
+            コピー
           </Button>
         </DialogActions>
       </Dialog>

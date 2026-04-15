@@ -42,6 +42,7 @@ const electronAPI: ElectronAPI = {
     getTestCaseResult: (executionId: string, seed: number) =>
       ipcRenderer.invoke('execution:getTestCaseResult', { executionId, seed }),
     deleteExecution: (executionId: string) => ipcRenderer.invoke('execution:delete', executionId),
+    getSourceCode: (sourceCodePath: string) => ipcRenderer.invoke('execution:getSourceCode', sourceCodePath),
     onLog: (callback: (data: ExecutionLogEvent) => void) => {
       const wrapper = (_event: IpcRendererEvent, data: ExecutionLogEvent) => callback(data);
       listenerMaps.log.set(callback, wrapper);

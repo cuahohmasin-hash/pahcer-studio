@@ -26,6 +26,7 @@ export interface ElectronAPI {
     getTestCases: (executionId: string) => Promise<TestCase[]>;
     getTestCaseResult: (executionId: string, seed: number) => Promise<string | null>;
     deleteExecution: (executionId: string) => Promise<SimpleSuccessResponse>;
+    getSourceCode: (sourceCodePath: string) => Promise<string>;
     onLog: (callback: (data: ExecutionLogEvent) => void) => void;
     offLog: (callback: (data: ExecutionLogEvent) => void) => void;
     onStatus: (callback: (data: ExecutionStatusEvent) => void) => void;
